@@ -19,6 +19,8 @@ return array(
         'application.models.*',
         'application.interfaces.*',
         'application.repositories.*',
+        'application.services.*',
+        'application.services.InterestCalculationStrategy.*',
     ),
 
     'components' => array(

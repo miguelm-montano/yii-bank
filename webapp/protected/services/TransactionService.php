@@ -1,0 +1,259 @@
+<?php
+
+/**
+ * Responsabilidad: orquestar operaciones de negocio que mueven dinero
+ * — depositar, retirar, transferir y revertir. No sabe COMO se
+ * persiste una cuenta o una transaccion (eso es de los repositories,
+ * inyectados por interfaz: Dependency Inversion) ni QUE formula de
+ * interes usar (eso es de InterestCalculationStrategyInterface:
+ * Strategy Pattern). Solo sabe orquestar el orden correcto de pasos y
+ * las reglas de negocio que los gobiernan.
+ */
+class TransactionService
+{
+    /**
+     * Simplificacion deliberada de esta etapa: Account todavia no
+     * modela una tasa de interes propia (por tipo de cuenta, por
+     * cliente, por promocion...), asi que se usa una tasa y un
+     * periodo fijos para toda la app. Buen candidato para un ticket
+     * futuro: mover esto a un atributo de Account o a una tabla de
+     * tasas por account_type.
+     */
+    const DEFAULT_INTEREST_RATE_PERCENT = 2.0;
+    const DEFAULT_INTEREST_PERIOD_MONTHS = 1;
+
+    /** @var TransactionRepositoryInterface */
+    private $transactionRepository;
+
+    /** @var AccountRepositoryInterface */
+    private $accountRepository;
+
+    /** @var InterestCalculationStrategyInterface */
+    private $defaultInterestStrategy;
+
+    public function __construct(
+        TransactionRepositoryInterface $transactionRepository,
+        AccountRepositoryInterface $accountRepository,
+        InterestCalculationStrategyInterface $defaultInterestStrategy
+    ) {
+        $this->transactionRepository = $transactionRepository;
+        $this->accountRepository = $accountRepository;
+        $this->defaultInterestStrategy = $defaultInterestStrategy;
+    }
+
+    /**
+     * Deposita en una cuenta y acredita el interes generado usando la
+     * estrategia recibida (o la inyectada por defecto en el
+     * constructor si no se pasa ninguna). Esto es el Strategy Pattern
+     * en accion: el mismo metodo produce resultados distintos segun
+     * el algoritmo que se le entregue (simple, compuesto...), sin que
+     * TransactionService cambie una sola linea.
+     *
+     * @return bool
+     */
+    public function deposit($accountId, $amount, ?InterestCalculationStrategyInterface $interestStrategy = null)
+    {
+        if ($amount <= 0) {
+            return false; // no se deposita un importe invalido
+        }
+
+        $account = $this->accountRepository->findById($accountId);
+
+        if ($account === null || $account->status !== Account::STATUS_ACTIVE) {
+            return false; // no se opera sobre una cuenta inexistente, frozen o closed
+        }
+
+        $strategy = $interestStrategy !== null ? $interestStrategy : $this->defaultInterestStrategy;
+
+        $interest = $strategy->calculate(
+            (float) $account->balance,
+            self::DEFAULT_INTEREST_RATE_PERCENT,
+            self::DEFAULT_INTEREST_PERIOD_MONTHS
+        );
+
+        $newBalance = (float) $account->balance + (float) $amount + $interest;
+
+        if (!$this->accountRepository->updateBalance($accountId, $newBalance)) {
+            return false;
+        }
+
+        $transaction = new Transaction();
+        $transaction->to_account_id = $accountId;
+        $transaction->amount = $amount;
+        $transaction->transaction_type = Transaction::TYPE_DEPOSIT;
+        $transaction->status = Transaction::STATUS_COMPLETED;
+        $transaction->description = sprintf('Deposito de %.2f + interes de %.2f', $amount, $interest);
+
+        return $this->transactionRepository->save($transaction);
+    }
+
+    /**
+     * Retira de una cuenta si las reglas de negocio lo permiten.
+     *
+     * NOTA de diseno: esta validacion duplica intencionalmente la de
+     * AccountService::canWithdraw(). Tal como esta definida esta
+     * etapa, TransactionService solo depende de
+     * AccountRepositoryInterface, no de AccountService, asi que no
+     * puede reutilizar esa logica sin crear una dependencia nueva.
+     * Es una duplicacion conocida y un buen candidato a ticket futuro
+     * (extraer una politica de retiro compartida entre ambos
+     * servicios).
+     *
+     * @return bool
+     */
+    public function withdraw($accountId, $amount)
+    {
+        if ($amount <= 0) {
+            return false;
+        }
+
+        $account = $this->accountRepository->findById($accountId);
+
+        if ($account === null || $account->status !== Account::STATUS_ACTIVE) {
+            return false;
+        }
+
+        if ((float) $account->balance < (float) $amount) {
+            return false; // no se permite dejar la cuenta en negativo
+        }
+
+        $newBalance = (float) $account->balance - (float) $amount;
+
+        if (!$this->accountRepository->updateBalance($accountId, $newBalance)) {
+            return false;
+        }
+
+        $transaction = new Transaction();
+        $transaction->from_account_id = $accountId;
+        $transaction->amount = $amount;
+        $transaction->transaction_type = Transaction::TYPE_WITHDRAWAL;
+        $transaction->status = Transaction::STATUS_COMPLETED;
+
+        return $this->transactionRepository->save($transaction);
+    }
+
+    /**
+     * Mueve dinero entre dos cuentas. Debe ser atomico: o se aplican
+     * los dos cambios de saldo o no se aplica ninguno.
+     *
+     * NOTA de diseno (fuera de alcance en este paso, segun se indico
+     * explicitamente): esto NO usa una transaccion de base de datos
+     * real (CDbConnection::beginTransaction()). Lo de abajo es una
+     * compensacion manual: si el segundo updateBalance falla, se
+     * intenta revertir el primero a mano. Eso NO es atomico de
+     * verdad — si el proceso muere entre los dos updateBalance, o hay
+     * otra escritura concurrente sobre la misma cuenta, el sistema
+     * puede quedar inconsistente. Es exactamente el tipo de bug que
+     * se resuelve con un ticket real ("las transferencias a veces
+     * descuadran el saldo") en la siguiente etapa.
+     *
+     * @return bool
+     */
+    public function transfer($fromAccountId, $toAccountId, $amount)
+    {
+        if ($fromAccountId === $toAccountId) {
+            return false; // transferirse a si mismo no es una operacion valida
+        }
+
+        if ($amount <= 0) {
+            return false;
+        }
+
+        $fromAccount = $this->accountRepository->findById($fromAccountId);
+        $toAccount = $this->accountRepository->findById($toAccountId);
+
+        if ($fromAccount === null || $toAccount === null) {
+            return false;
+        }
+
+        if ($fromAccount->status !== Account::STATUS_ACTIVE || $toAccount->status !== Account::STATUS_ACTIVE) {
+            return false;
+        }
+
+        if ((float) $fromAccount->balance < (float) $amount) {
+            return false;
+        }
+
+        $originalFromBalance = (float) $fromAccount->balance;
+        $newFromBalance = $originalFromBalance - (float) $amount;
+
+        if (!$this->accountRepository->updateBalance($fromAccountId, $newFromBalance)) {
+            return false;
+        }
+
+        $newToBalance = (float) $toAccount->balance + (float) $amount;
+
+        if (!$this->accountRepository->updateBalance($toAccountId, $newToBalance)) {
+            // Compensacion manual, no un rollback real: ver nota de diseno arriba.
+            $this->accountRepository->updateBalance($fromAccountId, $originalFromBalance);
+            return false;
+        }
+
+        // Una sola fila representa la transferencia: el modelo
+        // Transaction ya tiene from_account_id y to_account_id, crear
+        // dos filas duplicaria el mismo evento de negocio.
+        $transaction = new Transaction();
+        $transaction->from_account_id = $fromAccountId;
+        $transaction->to_account_id = $toAccountId;
+        $transaction->amount = $amount;
+        $transaction->transaction_type = Transaction::TYPE_TRANSFER;
+        $transaction->status = Transaction::STATUS_COMPLETED;
+
+        return $this->transactionRepository->save($transaction);
+    }
+
+    /**
+     * Revierte una transaccion completada, devolviendo el dinero
+     * moviendolo en sentido contrario segun el tipo de movimiento, y
+     * marca la transaccion original como reversed.
+     *
+     * Solo se puede revertir una transaccion completed: revertir una
+     * pending no tiene sentido (nunca se aplico un cambio de saldo) y
+     * revertir una ya reversed la revertiria dos veces.
+     *
+     * @return bool
+     */
+    public function reverseTransaction($transactionId)
+    {
+        $transaction = $this->transactionRepository->findById($transactionId);
+
+        if ($transaction === null || $transaction->status !== Transaction::STATUS_COMPLETED) {
+            return false;
+        }
+
+        $amount = (float) $transaction->amount;
+        $ok = false;
+
+        switch ($transaction->transaction_type) {
+            case Transaction::TYPE_DEPOSIT:
+                $account = $this->accountRepository->findById($transaction->to_account_id);
+                $ok = $account !== null && $this->accountRepository->updateBalance(
+                    $account->id,
+                    (float) $account->balance - $amount
+                );
+                break;
+
+            case Transaction::TYPE_WITHDRAWAL:
+                $account = $this->accountRepository->findById($transaction->from_account_id);
+                $ok = $account !== null && $this->accountRepository->updateBalance(
+                    $account->id,
+                    (float) $account->balance + $amount
+                );
+                break;
+
+            case Transaction::TYPE_TRANSFER:
+                $fromAccount = $this->accountRepository->findById($transaction->from_account_id);
+                $toAccount = $this->accountRepository->findById($transaction->to_account_id);
+                $ok = $fromAccount !== null && $toAccount !== null
+                    && $this->accountRepository->updateBalance($fromAccount->id, (float) $fromAccount->balance + $amount)
+                    && $this->accountRepository->updateBalance($toAccount->id, (float) $toAccount->balance - $amount);
+                break;
+        }
+
+        if (!$ok) {
+            return false;
+        }
+
+        return $this->transactionRepository->updateStatus($transactionId, Transaction::STATUS_REVERSED);
+    }
+}
