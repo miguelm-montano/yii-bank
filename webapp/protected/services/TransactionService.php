@@ -49,7 +49,7 @@ class TransactionService
      * el algoritmo que se le entregue (simple, compuesto...), sin que
      * TransactionService cambie una sola linea.
      *
-     * @return bool
+     * @return array{transaction_id:int,new_balance:float,interest_earned:float}|false
      */
     public function deposit($accountId, $amount, ?InterestCalculationStrategyInterface $interestStrategy = null)
     {
@@ -84,7 +84,15 @@ class TransactionService
         $transaction->status = Transaction::STATUS_COMPLETED;
         $transaction->description = sprintf('Deposito de %.2f + interes de %.2f', $amount, $interest);
 
-        return $this->transactionRepository->save($transaction);
+        if (!$this->transactionRepository->save($transaction)) {
+            return false;
+        }
+
+        return array(
+            'transaction_id' => (int) $transaction->id,
+            'new_balance' => $newBalance,
+            'interest_earned' => $interest,
+        );
     }
 
     /**
@@ -99,7 +107,7 @@ class TransactionService
      * (extraer una politica de retiro compartida entre ambos
      * servicios).
      *
-     * @return bool
+     * @return array{transaction_id:int,new_balance:float}|false
      */
     public function withdraw($accountId, $amount)
     {
@@ -129,7 +137,14 @@ class TransactionService
         $transaction->transaction_type = Transaction::TYPE_WITHDRAWAL;
         $transaction->status = Transaction::STATUS_COMPLETED;
 
-        return $this->transactionRepository->save($transaction);
+        if (!$this->transactionRepository->save($transaction)) {
+            return false;
+        }
+
+        return array(
+            'transaction_id' => (int) $transaction->id,
+            'new_balance' => $newBalance,
+        );
     }
 
     /**
@@ -147,7 +162,7 @@ class TransactionService
      * se resuelve con un ticket real ("las transferencias a veces
      * descuadran el saldo") en la siguiente etapa.
      *
-     * @return bool
+     * @return array{transaction_id:int,from_balance:float,to_balance:float}|false
      */
     public function transfer($fromAccountId, $toAccountId, $amount)
     {
@@ -199,7 +214,15 @@ class TransactionService
         $transaction->transaction_type = Transaction::TYPE_TRANSFER;
         $transaction->status = Transaction::STATUS_COMPLETED;
 
-        return $this->transactionRepository->save($transaction);
+        if (!$this->transactionRepository->save($transaction)) {
+            return false;
+        }
+
+        return array(
+            'transaction_id' => (int) $transaction->id,
+            'from_balance' => $newFromBalance,
+            'to_balance' => $newToBalance,
+        );
     }
 
     /**

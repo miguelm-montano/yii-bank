@@ -30,6 +30,15 @@ class AccountRepository implements AccountRepositoryInterface
     }
 
     /**
+     * CRUD generico: todas las cuentas, sin filtrar. Solo para
+     * testing/debug (AccountController::actionList sin user_id).
+     */
+    public function findAll()
+    {
+        return Account::model()->findAll();
+    }
+
+    /**
      * Query de negocio: "activa" es un concepto del dominio bancario
      * (una cuenta frozen o closed no deberia listarse aqui aunque
      * exista en la tabla). Por eso tiene nombre propio en vez de dejar

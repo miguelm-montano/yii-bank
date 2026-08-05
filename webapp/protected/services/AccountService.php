@@ -95,6 +95,22 @@ class AccountService
     }
 
     /**
+     * Listado usado por AccountController::actionList (modo
+     * testing/debug, sin nocion de permisos todavia). Con $userId
+     * filtra por usuario; sin el, devuelve todas las cuentas.
+     *
+     * @return Account[]
+     */
+    public function listAccounts($userId = null)
+    {
+        if ($userId !== null) {
+            return $this->accountRepository->findAllByUserId($userId);
+        }
+
+        return $this->accountRepository->findAll();
+    }
+
+    /**
      * Genera un numero de cuenta con formato simple (ES + 10 digitos)
      * y garantiza unicidad consultando al repository antes de
      * devolverlo. Es responsabilidad del service, no del modelo:

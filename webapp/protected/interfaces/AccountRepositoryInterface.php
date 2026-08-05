@@ -22,6 +22,14 @@ interface AccountRepositoryInterface
     /** CRUD generico: todas las cuentas del usuario, sin filtrar estado. @return Account[] */
     public function findAllByUserId($userId);
 
+    /**
+     * CRUD generico: todas las cuentas sin filtrar. Se agrega en el
+     * paso de Controllers porque AccountController::actionList
+     * necesita un modo "listar todo" para testing/debug.
+     * @return Account[]
+     */
+    public function findAll();
+
     /** Query de negocio: solo cuentas con status = active. @return Account[] */
     public function findActiveByUserId($userId);
 

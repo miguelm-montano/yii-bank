@@ -2,10 +2,6 @@
 
 /**
  * Configuracion principal de la aplicacion.
- *
- * PASO 1: solo se registran los modelos (entidades) y la conexion a BD.
- * Controllers, layouts, componentes de negocio, etc. se anadiran
- * en los siguientes pasos.
  */
 return array(
     'basePath' => dirname(__FILE__) . DIRECTORY_SEPARATOR . '..',
@@ -21,12 +17,30 @@ return array(
         'application.repositories.*',
         'application.services.*',
         'application.services.InterestCalculationStrategy.*',
+        // JsonController es la clase base de los controllers concretos;
+        // sin registrar el path, el autoloader de Yii no la encuentra
+        // al resolver "class UserController extends JsonController".
+        'application.controllers.*',
     ),
 
     'components' => array(
         'db' => array_merge(
             array('class' => 'CDbConnection'),
             require(dirname(__FILE__) . '/database.php')
+        ),
+
+        // API pura: sin vistas ni forms con token CSRF, asi que
+        // usamos 'path' solo para las dos rutas que el enunciado pide
+        // como pretty URL; el resto cae al patron generico
+        // <controller>/<action>.
+        'urlManager' => array(
+            'urlFormat' => 'path',
+            'showScriptName' => true,
+            'rules' => array(
+                'account/<id:\d+>/balance' => 'account/getBalance',
+                'transaction/history' => 'transaction/getHistory',
+                '<controller:\w+>/<action:\w+>' => '<controller>/<action>',
+            ),
         ),
     ),
 );
