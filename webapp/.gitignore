@@ -7,6 +7,9 @@
 /assets/*
 !/assets/.gitkeep
 
+# Base de datos SQLite generada por protected/data/init.db.php
+/protected/data/*.db
+
 # Configuracion local / secretos
 /protected/config/local.php
 .env
