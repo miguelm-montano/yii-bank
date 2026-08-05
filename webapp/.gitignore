@@ -1,0 +1,32 @@
+# Composer (el framework Yii 1.1 se instala aqui, no se versiona)
+/vendor/
+
+# Runtime y assets generados por Yii
+/protected/runtime/*
+!/protected/runtime/.gitkeep
+/assets/*
+!/assets/.gitkeep
+
+# Configuracion local / secretos
+/protected/config/local.php
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Reportes de tests
+/protected/tests/report/
+.phpunit.result.cache
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
