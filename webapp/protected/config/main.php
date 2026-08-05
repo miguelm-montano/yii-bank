@@ -11,9 +11,14 @@ return array(
     'basePath' => dirname(__FILE__) . DIRECTORY_SEPARATOR . '..',
     'name' => 'Yii Bank',
 
-    // Autocarga de todas las clases dentro de protected/models
+    // Autocarga de modelos, interfaces y repositories.
+    // Nota: esto es solo resolucion de rutas de clase (Yii::import),
+    // no inyeccion de dependencias. El wiring de "que implementacion
+    // concreta recibe cada interfaz" llega en un paso posterior.
     'import' => array(
         'application.models.*',
+        'application.interfaces.*',
+        'application.repositories.*',
     ),
 
     'components' => array(
