@@ -22,8 +22,8 @@ $pdo->exec("
         username TEXT NOT NULL UNIQUE,
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
 ");
 
@@ -36,8 +36,8 @@ $pdo->exec("
         balance DECIMAL(15,2) NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'active',
         currency TEXT NOT NULL DEFAULT 'EUR',
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     )
 ");
@@ -55,7 +55,7 @@ $pdo->exec("
         transaction_type TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
         description TEXT,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (from_account_id) REFERENCES accounts(id),
         FOREIGN KEY (to_account_id) REFERENCES accounts(id)
     )
