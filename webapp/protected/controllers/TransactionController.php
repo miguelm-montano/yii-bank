@@ -194,7 +194,7 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, 'Missing parameter: account_id');
         }
 
-        $transactions = $this->transactionRepository->findByAccountId($accountId, 50);
+        $transactions = $this->transactionService->getHistory($accountId);
 
         $data = array();
         foreach ($transactions as $transaction) {
