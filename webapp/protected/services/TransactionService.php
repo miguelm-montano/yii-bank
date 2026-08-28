@@ -279,4 +279,9 @@ class TransactionService
 
         return $this->transactionRepository->updateStatus($transactionId, Transaction::STATUS_REVERSED);
     }
+
+    public function getHistory($accountId)
+    {
+        return $this->transactionRepository->findByAccountId($accountId, 50);
+    }
 }
