@@ -32,6 +32,8 @@ class TransactionController extends JsonController
     ) {
         parent::__construct($id, $module);
 
+        Yii::import('application.observers.*');
+
         $accountRepository = new AccountRepository();
 
         $this->transactionRepository = $transactionRepository !== null
@@ -41,6 +43,8 @@ class TransactionController extends JsonController
         $this->transactionService = $transactionService !== null
             ? $transactionService
             : new TransactionService($this->transactionRepository, $accountRepository, new SimpleInterestStrategy());
+
+            $this->transactionService->attachObserver(new TransactionAuditObserver());
 
         $this->accountService = $accountService !== null
             ? $accountService
@@ -205,4 +209,5 @@ class TransactionController extends JsonController
 
         $this->sendJson(true, $data);
     }
+
 }

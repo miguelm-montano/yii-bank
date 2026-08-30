@@ -31,6 +31,9 @@ class TransactionService
     /** @var InterestCalculationStrategyInterface */
     private $defaultInterestStrategy;
 
+    /** @var TransactionObserverInterface[] */
+    private $observers = [];
+
     public function __construct(
         TransactionRepositoryInterface $transactionRepository,
         AccountRepositoryInterface $accountRepository,
@@ -88,6 +91,8 @@ class TransactionService
             return false;
         }
 
+        $this->notifyObservers($transaction);
+
         return array(
             'transaction_id' => (int) $transaction->id,
             'new_balance' => $newBalance,
@@ -140,6 +145,8 @@ class TransactionService
         if (!$this->transactionRepository->save($transaction)) {
             return false;
         }
+
+        $this->notifyObservers($transaction);
 
         return array(
             'transaction_id' => (int) $transaction->id,
@@ -223,6 +230,8 @@ class TransactionService
 
             $transaction->commit();
 
+            $this->notifyObservers($transactionModel);
+
             return array(
                 'transaction_id' => (int) $transactionModel->id,
                 'from_balance' => $newFromBalance,
@@ -286,11 +295,25 @@ class TransactionService
             return false;
         }
 
+        $this->notifyObservers($transaction);
+
         return $this->transactionRepository->updateStatus($transactionId, Transaction::STATUS_REVERSED);
     }
 
     public function getHistory($accountId)
     {
         return $this->transactionRepository->findByAccountId($accountId, 50);
+    }
+
+        public function attachObserver(TransactionObserverInterface $observer)
+    {
+        $this->observers[] = $observer;
+    }
+
+    private function notifyObservers(Transaction $transaction)
+    {
+        foreach ($this->observers as $observer) {
+         $observer->onTransactionExecuted($transaction);
+        }
     }
 }
