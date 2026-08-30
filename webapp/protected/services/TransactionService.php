@@ -192,37 +192,46 @@ class TransactionService
         $originalFromBalance = (float) $fromAccount->balance;
         $newFromBalance = $originalFromBalance - (float) $amount;
 
-        if (!$this->accountRepository->updateBalance($fromAccountId, $newFromBalance)) {
-            return false;
+        $transaction = Yii::app()->db->beginTransaction();
+
+        try {
+            if (!$this->accountRepository->updateBalance($fromAccountId, $newFromBalance)) {
+                throw new \Exception('Failed to update from account balance');
+            }
+
+            $newToBalance = (float) $toAccount->balance + (float) $amount;
+
+            if (!$this->accountRepository->updateBalance($toAccountId, $newToBalance)) {
+                // Compensacion manual, no un rollback real: ver nota de diseno arriba.
+                throw new \Exception('Failed to update to account balance');
+            }
+
+            // Una sola fila representa la transferencia: el modelo
+            // Transaction ya tiene from_account_id y to_account_id, crear
+            // dos filas duplicaria el mismo evento de negocio.
+            $transactionModel = new Transaction();
+            $transactionModel->from_account_id = $fromAccountId;
+            $transactionModel->to_account_id = $toAccountId;
+            $transactionModel->amount = $amount;
+            $transactionModel->transaction_type = Transaction::TYPE_TRANSFER;
+            $transactionModel->status = Transaction::STATUS_COMPLETED;
+
+            if (!$this->transactionRepository->save($transactionModel)) {
+                $transaction->rollBack();
+                throw new \Exception('Failed to save transaction record');
+            }
+
+            $transaction->commit();
+
+            return array(
+                'transaction_id' => (int) $transactionModel->id,
+                'from_balance' => $newFromBalance,
+                'to_balance' => $newToBalance,
+            );
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return false; // Re-throw the exception after rolling back
         }
-
-        $newToBalance = (float) $toAccount->balance + (float) $amount;
-
-        if (!$this->accountRepository->updateBalance($toAccountId, $newToBalance)) {
-            // Compensacion manual, no un rollback real: ver nota de diseno arriba.
-            $this->accountRepository->updateBalance($fromAccountId, $originalFromBalance);
-            return false;
-        }
-
-        // Una sola fila representa la transferencia: el modelo
-        // Transaction ya tiene from_account_id y to_account_id, crear
-        // dos filas duplicaria el mismo evento de negocio.
-        $transaction = new Transaction();
-        $transaction->from_account_id = $fromAccountId;
-        $transaction->to_account_id = $toAccountId;
-        $transaction->amount = $amount;
-        $transaction->transaction_type = Transaction::TYPE_TRANSFER;
-        $transaction->status = Transaction::STATUS_COMPLETED;
-
-        if (!$this->transactionRepository->save($transaction)) {
-            return false;
-        }
-
-        return array(
-            'transaction_id' => (int) $transaction->id,
-            'from_balance' => $newFromBalance,
-            'to_balance' => $newToBalance,
-        );
     }
 
     /**
