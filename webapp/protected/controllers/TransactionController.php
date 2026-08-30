@@ -125,10 +125,6 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
-        if (!$this->accountService->canWithdraw($body['account_id'], $body['amount'])) {
-            $this->sendJson(false, null, 'Insufficient funds or account not available');
-        }
-
         $result = $this->transactionService->withdraw($body['account_id'], $body['amount']);
 
         if ($result === false) {
