@@ -91,7 +91,7 @@ class AccountService
             return false;
         }
 
-        if  ((float) $account->balance >= (float) $amount) {
+        if  ((float) $account->balance < (float) $amount) {
             return false;
         }
 
@@ -103,7 +103,7 @@ class AccountService
             }
         }
 
-        return false;
+        return true;
     }
 
     /**
