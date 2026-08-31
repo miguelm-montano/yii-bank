@@ -111,4 +111,26 @@ class AccountRepository implements AccountRepositoryInterface
             return false;
         }
     }
+
+    public function updateWithdrawalCount($accountId, $withdrawalCount)
+    {
+        $account = $this->findById($accountId);
+
+        if ($account === null) {
+            return false;
+        }
+
+        $account->withdrawal_count = $withdrawalCount;
+
+        if (!$account->validate(array('withdrawal_count'))) {
+            return false;
+        }
+
+        try {
+            return $account->save(false, array('withdrawal_count'));
+        } catch (CDbException $e) {
+            Yii::log($e->getMessage(), CLogger::LEVEL_ERROR, 'application.repositories.AccountRepository');
+            return false;
+        }
+    }
 }

@@ -130,6 +130,10 @@ class TransactionService
             return false; // no se permite dejar la cuenta en negativo
         }
 
+        if ($account->account_type === Account::TYPE_SAVINGS && (int) $account->withdrawal_count >= 3) {
+            return false; // limite de retiros para cuentas de ahorro: maximo 3 por mes
+        }
+
         $newBalance = (float) $account->balance - (float) $amount;
 
         if (!$this->accountRepository->updateBalance($accountId, $newBalance)) {
@@ -147,6 +151,9 @@ class TransactionService
         }
 
         $this->notifyObservers($transaction);
+
+        $account->withdrawal_count = (int) $account->withdrawal_count + 1;
+        $this->accountRepository->updateWithdrawalCount($accountId, $account->withdrawal_count);
 
         return array(
             'transaction_id' => (int) $transaction->id,
