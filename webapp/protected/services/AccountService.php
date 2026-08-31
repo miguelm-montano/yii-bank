@@ -91,7 +91,19 @@ class AccountService
             return false;
         }
 
-        return (float) $account->balance >= (float) $amount;
+        if  ((float) $account->balance < (float) $amount) {
+            return false;
+        }
+
+        //Verify limit by type of account
+
+        if ($account->account_type === Account::TYPE_SAVINGS) {
+            if((int) $account->withdrawal_count >= 3) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

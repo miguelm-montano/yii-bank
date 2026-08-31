@@ -36,6 +36,8 @@ $pdo->exec("
         balance DECIMAL(15,2) NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'active',
         currency TEXT NOT NULL DEFAULT 'EUR',
+        withdrawal_count INTEGER NOT NULL DEFAULT 0,
+        withdrawal_reset_date TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)

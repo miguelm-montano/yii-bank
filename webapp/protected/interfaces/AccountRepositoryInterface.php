@@ -49,4 +49,6 @@ interface AccountRepositoryInterface
      * @return bool
      */
     public function updateBalance($accountId, $newBalance);
+
+    public function updateWithdrawalCount($accountId, $newCount);
 }
