@@ -15,6 +15,9 @@ return array(
         'application.repositories.*',
         'application.services.*',
         'application.services.InterestCalculationStrategy.*',
+        'application.strategies.*',
+        'application.factories.*',
+        'application.observers.*',
     ),
 
     'components' => array(

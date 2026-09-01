@@ -28,7 +28,7 @@ class InterestAccrualCommand extends CConsoleCommand
 
         //Deposita sin estategia visible (no suma en interest_earned del usuario)
 
-        $result = $transactionService->deposit($account->id, 0, new SimpleInterestStrategy());
+        $result = $transactionService->deposit($account->id, $interestAmount, new SimpleInterestStrategy());
 
         if ($result !== false) {
             echo "Interest accrued for account {$account->id}: {$interestAmount}\n";
