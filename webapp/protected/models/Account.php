@@ -22,6 +22,8 @@ class Account extends CActiveRecord
 {
     const TYPE_CHECKING = 'checking';
     const TYPE_SAVINGS = 'savings';
+    const TYPE_CREDIT = 'credit';
+    const TYPE_BUSINESS = 'business';
 
     const STATUS_ACTIVE = 'active';
     const STATUS_FROZEN = 'frozen';
@@ -48,7 +50,7 @@ class Account extends CActiveRecord
             array('user_id', 'numerical', 'integerOnly' => true),
             array('account_number', 'length', 'max' => 34),
             array('account_number', 'unique'),
-            array('account_type', 'in', 'range' => array(self::TYPE_CHECKING, self::TYPE_SAVINGS)),
+            array('account_type', 'in', 'range' => array(self::TYPE_CHECKING, self::TYPE_SAVINGS, self::TYPE_CREDIT, self::TYPE_BUSINESS)),
             array('balance', 'numerical'),
             array('status', 'in', 'range' => array(self::STATUS_ACTIVE, self::STATUS_FROZEN, self::STATUS_CLOSED)),
             array('currency', 'length', 'is' => 3),
