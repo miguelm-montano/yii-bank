@@ -9,6 +9,8 @@ class AccountFactory
                 return new SavingsAccount();
             case Account::TYPE_CHECKING:
                 return new CheckingAccount();
+            case 'business':
+                return new BusinessAccount();
             default:
                 return new CreditAccount(); // Default to credit account for unknown types
         }
