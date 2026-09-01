@@ -87,23 +87,20 @@ class AccountService
             return false;
         }
 
-        if ($amount <= 0) {
-            return false;
+        $strategy = $this->getWithdrawalStrategy($account->account_type);
+        return $strategy->canWithdraw($account, $amount);
+    }
+
+    public function getWithdrawalStrategy($accountType)
+    {
+        switch ($accountType) {
+            case Account::TYPE_CHECKING:
+                return new CheckingWithdrawalStrategy();
+            case Account::TYPE_SAVINGS:
+                return new SavingsWithdrawalStrategy();
+            default:
+                return new CreditWithdrawalStrategy(); // Default strategy for credit accounts
         }
-
-        if  ((float) $account->balance < (float) $amount) {
-            return false;
-        }
-
-        //Verify limit by type of account
-
-        if ($account->account_type === Account::TYPE_SAVINGS) {
-            if((int) $account->withdrawal_count >= 3) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     /**

@@ -1,6 +1,6 @@
 <?php
 
-class CreditwithdrawalStrategy implements WithdrawalStrategyInterface
+class CreditWithdrawalStrategy implements WithdrawalStrategyInterface
 {
     /**
      * Determine if a withdrawal is allowed for the given account and amount
