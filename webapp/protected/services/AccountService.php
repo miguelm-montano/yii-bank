@@ -39,10 +39,9 @@ class AccountService
             return false;
         }
 
-        $account = new Account();
+        $account = AccountFactory::create($accountType);
         $account->user_id = $userId;
         $account->account_number = $this->generateUniqueAccountNumber();
-        $account->account_type = $accountType;
         $account->balance = 0;
         $account->status = Account::STATUS_ACTIVE;
 
