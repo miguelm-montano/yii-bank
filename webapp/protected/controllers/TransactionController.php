@@ -18,6 +18,9 @@ class TransactionController extends JsonController
     /** @var TransactionRepositoryInterface */
     private $transactionRepository;
 
+    /** @var AccountRepositoryInterface */
+    private $accountRepository;
+
     /**
      * Ver la nota en UserController::__construct sobre por que los
      * servicios son parametros opcionales: es el composition root de
@@ -35,6 +38,7 @@ class TransactionController extends JsonController
         Yii::import('application.observers.*');
 
         $accountRepository = new AccountRepository();
+        $this->accountRepository = $accountRepository;
 
         $this->transactionRepository = $transactionRepository !== null
             ? $transactionRepository
@@ -71,8 +75,10 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Invalid interest_strategy: must be 'simple' or 'compound'");
         }
 
+        $idempotencyKey = isset($body['idempotency_key']) ? $body['idempotency_key'] : null;
+
         $amountInCents = (int) round($body['amount'] * 100);
-        $result = $this->transactionService->deposit($body['account_id'], $amountInCents, $strategy);
+        $result = $this->transactionService->deposit($body['account_id'], $amountInCents, $strategy, $idempotencyKey);
 
         if ($result === false) {
             $this->sendJson(false, null, 'No se pudo procesar el deposito (cuenta invalida/frozen/closed, o importe invalido)');
@@ -130,8 +136,10 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
+        $idempotencyKey = isset($body['idempotency_key']) ? $body['idempotency_key'] : null;
+
         $amountInCents = (int) round($body['amount'] * 100);
-        $result = $this->transactionService->withdraw($body['account_id'], $amountInCents);
+        $result = $this->transactionService->withdraw($body['account_id'], $amountInCents, $idempotencyKey);
 
         if ($result === false) {
             $this->sendJson(false, null, 'No se pudo procesar el retiro');
@@ -156,8 +164,10 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
+        $idempotencyKey = isset($body['idempotency_key']) ? $body['idempotency_key'] : null;
+
         $amountInCents = (int) round($body['amount'] * 100);
-        $result = $this->transactionService->transfer($body['from_account_id'], $body['to_account_id'], $amountInCents);
+        $result = $this->transactionService->transfer($body['from_account_id'], $body['to_account_id'], $amountInCents, $idempotencyKey);
 
         if ($result === false) {
             $this->sendJson(false, null, 'Insufficient funds');
