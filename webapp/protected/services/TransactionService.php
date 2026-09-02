@@ -68,13 +68,17 @@ class TransactionService
 
         $strategy = $interestStrategy !== null ? $interestStrategy : $this->defaultInterestStrategy;
 
-        $interest = $strategy->calculate(
+        // balance/amount son centimos enteros; el resultado de la
+        // estrategia es fraccionario (formula de interes en base 100),
+        // asi que se redondea a centimos antes de sumarlo o el balance
+        // deja de ser entero y falla la validacion de Account::rules().
+        $interest = (int) round($strategy->calculate(
             (float) $account->balance,
             self::DEFAULT_INTEREST_RATE_PERCENT,
             self::DEFAULT_INTEREST_PERIOD_MONTHS
-        );
+        ));
 
-        $newBalance = (float) $account->balance + (float) $amount + $interest;
+        $newBalance = (int) $account->balance + (int) $amount + $interest;
 
         if (!$this->accountRepository->updateBalance($accountId, $newBalance)) {
             return false;

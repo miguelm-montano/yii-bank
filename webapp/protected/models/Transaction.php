@@ -9,7 +9,7 @@
  * @property integer $id
  * @property integer $from_account_id
  * @property integer $to_account_id
- * @property string $amount
+ * @property integer $amount
  * @property string $transaction_type
  * @property string $status
  * @property string $description
@@ -48,7 +48,7 @@ class Transaction extends CActiveRecord
         return array(
             array('amount, transaction_type', 'required'),
             array('from_account_id, to_account_id', 'numerical', 'integerOnly' => true),
-            array('amount', 'numerical', 'min' => 0.01),
+            array('amount', 'numerical', 'integerOnly' => true, 'min' => 1),
             array('transaction_type', 'in', 'range' => array(self::TYPE_TRANSFER, self::TYPE_DEPOSIT, self::TYPE_WITHDRAWAL)),
             array('status', 'in', 'range' => array(self::STATUS_PENDING, self::STATUS_COMPLETED, self::STATUS_FAILED, self::STATUS_REVERSED)),
             array('description', 'length', 'max' => 255),

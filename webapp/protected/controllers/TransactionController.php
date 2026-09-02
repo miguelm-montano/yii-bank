@@ -71,7 +71,8 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Invalid interest_strategy: must be 'simple' or 'compound'");
         }
 
-        $result = $this->transactionService->deposit($body['account_id'], $body['amount'], $strategy);
+        $amountInCents = (int) round($body['amount'] * 100);
+        $result = $this->transactionService->deposit($body['account_id'], $amountInCents, $strategy);
 
         if ($result === false) {
             $this->sendJson(false, null, 'No se pudo procesar el deposito (cuenta invalida/frozen/closed, o importe invalido)');
@@ -79,8 +80,8 @@ class TransactionController extends JsonController
 
         $this->sendJson(true, array(
             'transaction_id' => $result['transaction_id'],
-            'new_balance' => $result['new_balance'],
-            'interest_earned' => $result['interest_earned'],
+            'new_balance' => $this->toEuros($result['new_balance']),
+            'interest_earned' => $this->toEuros($result['interest_earned']),
         ));
     }
 
@@ -129,7 +130,8 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
-        $result = $this->transactionService->withdraw($body['account_id'], $body['amount']);
+        $amountInCents = (int) round($body['amount'] * 100);
+        $result = $this->transactionService->withdraw($body['account_id'], $amountInCents);
 
         if ($result === false) {
             $this->sendJson(false, null, 'No se pudo procesar el retiro');
@@ -137,7 +139,7 @@ class TransactionController extends JsonController
 
         $this->sendJson(true, array(
             'transaction_id' => $result['transaction_id'],
-            'new_balance' => $result['new_balance'],
+            'new_balance' => $this->toEuros($result['new_balance']),
         ));
     }
 
@@ -154,7 +156,8 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
-        $result = $this->transactionService->transfer($body['from_account_id'], $body['to_account_id'], $body['amount']);
+        $amountInCents = (int) round($body['amount'] * 100);
+        $result = $this->transactionService->transfer($body['from_account_id'], $body['to_account_id'], $amountInCents);
 
         if ($result === false) {
             $this->sendJson(false, null, 'Insufficient funds');
@@ -162,8 +165,8 @@ class TransactionController extends JsonController
 
         $this->sendJson(true, array(
             'transaction_id' => $result['transaction_id'],
-            'from_balance' => $result['from_balance'],
-            'to_balance' => $result['to_balance'],
+            'from_balance' => $this->toEuros($result['from_balance']),
+            'to_balance' => $this->toEuros($result['to_balance']),
         ));
     }
 
@@ -200,7 +203,7 @@ class TransactionController extends JsonController
         foreach ($transactions as $transaction) {
             $data[] = array(
                 'transaction_id' => (int) $transaction->id,
-                'amount' => (float) $transaction->amount,
+                'amount' => $this->toEuros($transaction->amount),
                 'type' => $transaction->transaction_type,
                 'status' => $transaction->status,
                 'created_at' => $transaction->created_at,
@@ -210,4 +213,13 @@ class TransactionController extends JsonController
         $this->sendJson(true, $data);
     }
 
+    /**
+     * Frontera API: balance/amount se guardan y calculan en centimos
+     * enteros (ver Account::rules() y TransactionService), pero el
+     * cliente de la API sigue hablando en euros con decimales.
+     */
+    private function toEuros($cents)
+    {
+        return round($cents / 100, 2);
+    }
 }

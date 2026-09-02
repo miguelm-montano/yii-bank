@@ -10,7 +10,7 @@
  * @property integer $user_id
  * @property string $account_number
  * @property string $account_type
- * @property string $balance
+ * @property integer $balance
  * @property string $status
  * @property string $currency
  * @property string $created_at
@@ -51,7 +51,7 @@ class Account extends CActiveRecord
             array('account_number', 'length', 'max' => 34),
             array('account_number', 'unique'),
             array('account_type', 'in', 'range' => array(self::TYPE_CHECKING, self::TYPE_SAVINGS, self::TYPE_CREDIT, self::TYPE_BUSINESS)),
-            array('balance', 'numerical'),
+            array('balance', 'numerical', 'integerOnly' => true),
             array('status', 'in', 'range' => array(self::STATUS_ACTIVE, self::STATUS_FROZEN, self::STATUS_CLOSED)),
             array('currency', 'length', 'is' => 3),
             array('id, created_at, updated_at', 'safe', 'on' => 'search'),
