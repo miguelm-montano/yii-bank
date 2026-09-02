@@ -56,6 +56,7 @@ $pdo->exec("
         amount INTEGER NOT NULL,
         transaction_type TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
+        idempotency_key TEXT UNIQUE,
         description TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (from_account_id) REFERENCES accounts(id),
