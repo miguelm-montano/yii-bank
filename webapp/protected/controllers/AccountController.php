@@ -47,7 +47,7 @@ class AccountController extends JsonController
         $this->sendJson(true, array(
             'account_id' => (int) $account->id,
             'account_number' => $account->account_number,
-            'balance' => (float) $account->balance,
+            'balance' => $this->toEuros($account->balance),
         ));
     }
 
@@ -66,7 +66,7 @@ class AccountController extends JsonController
 
         $this->sendJson(true, array(
             'account_id' => (int) $id,
-            'balance' => $balance,
+            'balance' => $this->toEuros($balance),
         ));
     }
 
@@ -89,11 +89,21 @@ class AccountController extends JsonController
                 'account_id' => (int) $account->id,
                 'account_number' => $account->account_number,
                 'account_type' => $account->account_type,
-                'balance' => (float) $account->balance,
+                'balance' => $this->toEuros($account->balance),
                 'status' => $account->status,
             );
         }
 
         $this->sendJson(true, $data);
+    }
+
+    /**
+     * Frontera API: balance se guarda en centimos enteros (ver
+     * Account::rules()), pero el cliente de la API sigue hablando en
+     * euros con decimales.
+     */
+    private function toEuros($cents)
+    {
+        return round($cents / 100, 2);
     }
 }
