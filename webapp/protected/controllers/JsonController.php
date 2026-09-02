@@ -80,4 +80,13 @@ abstract class JsonController extends CController
 
         Yii::app()->end();
     }
+
+    public function getAuthenticationUserId() {
+
+        if (!isset($_SESSION['user_id'])) {
+            $this->sendJson(false, null, 'Unauthorized', 401);
+        }
+
+        return $_SESSION['user_id'];
+    }
 }
