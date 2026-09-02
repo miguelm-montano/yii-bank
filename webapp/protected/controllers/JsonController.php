@@ -25,8 +25,21 @@ abstract class JsonController extends CController
     protected function getJsonBody()
     {
         $raw = Yii::app()->request->getRawBody();
+
+        //empty body
+        if (empty($raw)) {
+            return array();
+        }
+
+        //try to decode JSON
         $decoded = json_decode($raw, true);
 
+        //Invalid JSON
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->sendJson(false, null, 'Invalid JSON body', 400);
+        }
+
+        //Valid JSON
         return is_array($decoded) ? $decoded : array();
     }
 
