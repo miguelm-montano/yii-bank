@@ -14,6 +14,7 @@
  * @property string $status
  * @property string $description
  * @property string $created_at
+ * @property string $idempotency_key
  *
  * @property Account $fromAccount
  * @property Account $toAccount
@@ -52,6 +53,7 @@ class Transaction extends CActiveRecord
             array('transaction_type', 'in', 'range' => array(self::TYPE_TRANSFER, self::TYPE_DEPOSIT, self::TYPE_WITHDRAWAL)),
             array('status', 'in', 'range' => array(self::STATUS_PENDING, self::STATUS_COMPLETED, self::STATUS_FAILED, self::STATUS_REVERSED)),
             array('description', 'length', 'max' => 255),
+            array('idempotency_key', 'length', 'max' => 255),
             array('id, from_account_id, to_account_id, created_at', 'safe', 'on' => 'search'),
         );
     }

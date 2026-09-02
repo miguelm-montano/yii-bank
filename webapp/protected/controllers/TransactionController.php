@@ -71,8 +71,30 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Invalid interest_strategy: must be 'simple' or 'compound'");
         }
 
+        $idempotencyKey = isset($body['idempotency_key']) ? $body['idempotency_key'] : null;
+
+        // Verificar si ya existe esta transacción
+        if ($idempotencyKey !== null) {
+            $existingTransaction = Transaction::model()->findByAttributes(array('idempotency_key' => $idempotencyKey));
+
+
+            // Ya fue procesada, retorna el resultado original
+            if ($existingTransaction !== null) {
+            $account = $this->accountRepository->findById($body['account_id']);
+            $this->sendJson(true, array(
+                'transaction_id' => $existingTransaction->id,
+                'new_balance' => $account->balance / 100,
+                'interest_earned' => 0,
+            ));
+            }
+        }
+
         $amountInCents = (int) round($body['amount'] * 100);
         $result = $this->transactionService->deposit($body['account_id'], $amountInCents, $strategy);
+
+        if ($idempotencyKey !== null && $result !== false) {
+            Transaction::model()->updateByPk($result['transaction_id'], array('idempotency_key' => $idempotencyKey));
+        }
 
         if ($result === false) {
             $this->sendJson(false, null, 'No se pudo procesar el deposito (cuenta invalida/frozen/closed, o importe invalido)');
@@ -130,8 +152,27 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
+        $idempotencyKey = isset($body['idempotency_key']) ? $body['idempotency_key'] : null;
+
+        // Verificar si ya existe esta transacción
+        if ($idempotencyKey !== null) {
+            $existingTransaction = Transaction::model()->findByAttributes(array     ('idempotency_key' => $idempotencyKey));
+
+            if ($existingTransaction !== null) {
+                $account = $this->accountRepository->findById($body     ['account_id']);
+                $this->sendJson(true, array(
+                    'transaction_id' => (int) $existingTransaction->id,
+                    'new_balance' => $account->balance / 100,
+                ));
+            }
+        }
+
         $amountInCents = (int) round($body['amount'] * 100);
         $result = $this->transactionService->withdraw($body['account_id'], $amountInCents);
+
+        if ($idempotencyKey !== null && $result !== false) {
+            Transaction::model()->updateByPk($result['transaction_id'], array('idempotency_key' => $idempotencyKey));
+        }
 
         if ($result === false) {
             $this->sendJson(false, null, 'No se pudo procesar el retiro');
@@ -156,8 +197,29 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
+        $idempotencyKey = isset($body['idempotency_key']) ? $body['idempotency_key'] : null;
+
+        // Verificar si ya existe esta transacción
+        if ($idempotencyKey !== null) {
+            $existingTransaction = Transaction::model()->findByAttributes(array('idempotency_key' => $idempotencyKey));
+
+        if ($existingTransaction !== null) {
+            $fromAccount = $this->accountRepository->findById($body['from_account_id']);
+            $toAccount = $this->accountRepository->findById($body['to_account_id']);
+            $this->sendJson(true, array(
+                'transaction_id' => (int) $existingTransaction->id,
+                'from_balance' => $this->toEuros($fromAccount->balance),
+                'to_balance' => $this->toEuros($toAccount->balance),
+                ));
+            }
+        }
+
         $amountInCents = (int) round($body['amount'] * 100);
         $result = $this->transactionService->transfer($body['from_account_id'], $body['to_account_id'], $amountInCents);
+
+        if ($idempotencyKey !== null && $result !== false) {
+            Transaction::model()->updateByPk($result['transaction_id'], array('idempotency_key' => $idempotencyKey));
+}
 
         if ($result === false) {
             $this->sendJson(false, null, 'Insufficient funds');
