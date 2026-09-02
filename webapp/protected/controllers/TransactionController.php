@@ -36,6 +36,7 @@ class TransactionController extends JsonController
         parent::__construct($id, $module);
 
         Yii::import('application.observers.*');
+        Yii::import('application.strategies.*');
 
         $accountRepository = new AccountRepository();
         $this->accountRepository = $accountRepository;
@@ -67,6 +68,18 @@ class TransactionController extends JsonController
 
         if ($missing !== null) {
             $this->sendJson(false, null, "Missing parameter: {$missing}");
+        }
+
+        // Verificar autorización
+        $authenticatedUserId = $this->getAuthenticatedUserId();
+        $account = $this->accountRepository->findById($body['account_id']);
+
+        if ($account === null) {
+            $this->sendJson(false, null, 'Account not found', 404);
+        }
+
+        if ((int) $account->user_id !== $authenticatedUserId) {
+            $this->sendJson(false, null, 'Unauthorized: cannot deposit to another user account', 403);
         }
 
         $strategy = $this->resolveInterestStrategy($body['interest_strategy']);
@@ -136,6 +149,18 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
+            // Verificar autorización
+        $authenticatedUserId = $this->getAuthenticatedUserId();
+        $account = $this->accountRepository->findById($body['account_id']);
+
+        if ($account === null) {
+            $this->sendJson(false, null, 'Account not found', 404);
+        }
+
+        if ((int) $account->user_id !== $authenticatedUserId) {
+            $this->sendJson(false, null, 'Unauthorized: cannot withdraw from another user account', 403);
+        }
+
         $idempotencyKey = isset($body['idempotency_key']) ? $body['idempotency_key'] : null;
 
         $amountInCents = (int) round($body['amount'] * 100);
@@ -162,6 +187,24 @@ class TransactionController extends JsonController
 
         if ($missing !== null) {
             $this->sendJson(false, null, "Missing parameter: {$missing}");
+        }
+
+        // Verificar autorización: usuario solo puede transferir DESDE su propia cuenta
+        $authenticatedUserId = $this->getAuthenticatedUserId();
+        $fromAccount = $this->accountRepository->findById($body['from_account_id']);
+
+        if ($fromAccount === null) {
+            $this->sendJson(false, null, 'From account not found', 404);
+        }
+
+        if ((int) $fromAccount->user_id !== $authenticatedUserId) {
+            $this->sendJson(false, null, 'Unauthorized: cannot transfer from another user   account', 403);
+        }
+
+        // Verificar que cuenta destino existe (pero no necesita ser del usuario autenticado)
+        $toAccount = $this->accountRepository->findById($body['to_account_id']);
+        if ($toAccount === null) {
+        $this->sendJson(false, null, 'To account not found', 404);
         }
 
         $idempotencyKey = isset($body['idempotency_key']) ? $body['idempotency_key'] : null;

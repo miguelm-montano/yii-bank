@@ -10,6 +10,7 @@ class AccountController extends JsonController
 {
     /** @var AccountService */
     private $accountService;
+    private $accountRepository;
 
     /**
      * Ver la nota en UserController::__construct sobre por que el
@@ -20,9 +21,12 @@ class AccountController extends JsonController
     {
         parent::__construct($id, $module);
 
+        $accountRepository = new AccountRepository();
+        $this->accountRepository = $accountRepository;
+
         $this->accountService = $accountService !== null
             ? $accountService
-            : new AccountService(new AccountRepository(), new UserRepository());
+            : new AccountService($accountRepository, new UserRepository());
     }
 
     /**
@@ -36,6 +40,12 @@ class AccountController extends JsonController
 
         if ($missing !== null) {
             $this->sendJson(false, null, "Missing parameter: {$missing}");
+        }
+
+        //Verificar autorización
+        $authenticatedUserId = $this->getAuthenticatedUserId();
+        if ((int) $body['user_id'] !== $authenticatedUserId) {
+            $this->sendJson(false, null, 'Unauthorized: cannot create account for another user', 403);
         }
 
         $account = $this->accountService->createAccount($body['user_id'], $body['account_type']);
@@ -58,11 +68,18 @@ class AccountController extends JsonController
      */
     public function actionGetBalance($id)
     {
-        $balance = $this->accountService->getBalance($id);
+        $authenticatedUserId = $this->getAuthenticatedUserId();
+        $account = $this->accountRepository->findById($id);
 
-        if ($balance === null) {
+        if ($account === null) {
             $this->sendJson(false, null, 'Account not found', 404);
         }
+
+        if ((int) $account->user_id !== $authenticatedUserId) {
+            $this->sendJson(false, null, 'Unauthorized: cannot access another user account', 403);
+        }
+
+        $balance = $this->accountService->getBalance($id);
 
         $this->sendJson(true, array(
             'account_id' => (int) $id,
@@ -80,8 +97,10 @@ class AccountController extends JsonController
      */
     public function actionList()
     {
-        $userId = Yii::app()->request->getParam('user_id');
-        $accounts = $this->accountService->listAccounts($userId);
+        $authenticatedUserId = $this->getAuthenticatedUserId();
+    
+        // Solo mostrar cuentas del usuario autenticado
+        $accounts = $this->accountService->listAccounts($authenticatedUserId);
 
         $data = array();
         foreach ($accounts as $account) {

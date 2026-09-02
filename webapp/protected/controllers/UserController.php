@@ -75,9 +75,12 @@ class UserController extends JsonController
             $this->sendJson(false, null, 'Credenciales invalidas');
         }
 
+        // Guardar en sesión (ya arrancada en JsonController::beforeAction())
+        $_SESSION['user_id'] = (int) $user->id;
+
         $this->sendJson(true, array(
             'user_id' => (int) $user->id,
             'username' => $user->username,
-        ));
+        )); 
     }
 }
