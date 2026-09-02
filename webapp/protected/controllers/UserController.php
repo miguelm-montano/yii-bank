@@ -75,8 +75,7 @@ class UserController extends JsonController
             $this->sendJson(false, null, 'Credenciales invalidas');
         }
 
-        // Guardar en sesión
-        session_start();
+        // Guardar en sesión (ya arrancada en JsonController::beforeAction())
         $_SESSION['user_id'] = (int) $user->id;
 
         $this->sendJson(true, array(

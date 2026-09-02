@@ -17,6 +17,12 @@ abstract class JsonController extends CController
 {
     public $layout = false;
 
+    public function beforeAction($action) {
+
+        session_start();
+        return parent::beforeAction($action);
+    }
+
     /**
      * Decodifica el body JSON de la peticion. Si no es JSON valido,
      * retorna un array vacio (asi el caller lo trata igual que
@@ -81,7 +87,7 @@ abstract class JsonController extends CController
         Yii::app()->end();
     }
 
-    public function getAuthenticationUserId() {
+    public function getAuthenticatedUserId() {
 
         if (!isset($_SESSION['user_id'])) {
             $this->sendJson(false, null, 'Unauthorized', 401);
