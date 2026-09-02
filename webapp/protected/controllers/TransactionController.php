@@ -18,6 +18,9 @@ class TransactionController extends JsonController
     /** @var TransactionRepositoryInterface */
     private $transactionRepository;
 
+    /** @var AccountRepositoryInterface */
+    private $accountRepository;
+
     /**
      * Ver la nota en UserController::__construct sobre por que los
      * servicios son parametros opcionales: es el composition root de
@@ -35,6 +38,7 @@ class TransactionController extends JsonController
         Yii::import('application.observers.*');
 
         $accountRepository = new AccountRepository();
+        $this->accountRepository = $accountRepository;
 
         $this->transactionRepository = $transactionRepository !== null
             ? $transactionRepository
