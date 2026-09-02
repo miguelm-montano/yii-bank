@@ -71,7 +71,8 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Invalid interest_strategy: must be 'simple' or 'compound'");
         }
 
-        $result = $this->transactionService->deposit($body['account_id'], $body['amount'], $strategy);
+        $amountInCents = (int) ($body['amount'] * 100);
+        $result = $this->transactionService->deposit($body['account_id'], $amountInCents, $strategy);
 
         if ($result === false) {
             $this->sendJson(false, null, 'No se pudo procesar el deposito (cuenta invalida/frozen/closed, o importe invalido)');
@@ -129,7 +130,8 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
-        $result = $this->transactionService->withdraw($body['account_id'], $body['amount']);
+        $amountInCents = (int) ($body['amount'] * 100);
+        $result = $this->transactionService->withdraw($body['account_id'], $amountInCents);
 
         if ($result === false) {
             $this->sendJson(false, null, 'No se pudo procesar el retiro');
@@ -154,7 +156,8 @@ class TransactionController extends JsonController
             $this->sendJson(false, null, "Missing parameter: {$missing}");
         }
 
-        $result = $this->transactionService->transfer($body['from_account_id'], $body['to_account_id'], $body['amount']);
+        $amountInCents = (int) ($body['amount'] * 100);
+        $result = $this->transactionService->transfer($body['from_account_id'], $body['to_account_id'], $amountInCents);
 
         if ($result === false) {
             $this->sendJson(false, null, 'Insufficient funds');
