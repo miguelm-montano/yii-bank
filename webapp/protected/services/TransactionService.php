@@ -54,8 +54,23 @@ class TransactionService
      *
      * @return array{transaction_id:int,new_balance:float,interest_earned:float}|false
      */
-    public function deposit($accountId, $amount, ?InterestCalculationStrategyInterface $interestStrategy = null)
+    public function deposit($accountId, $amount, ?InterestCalculationStrategyInterface $interestStrategy = null, $idempotencyKey = null)
     {
+        if ($idempotencyKey !== null) {
+            $existing = $this->transactionRepository->findByIdempotencyKey($idempotencyKey);
+
+            if ($existing !== null) {
+                $account = $this->accountRepository->findById($existing->to_account_id);
+
+                return array(
+                    'transaction_id' => (int) $existing->id,
+                    'new_balance' => $account !== null ? (int) $account->balance : null,
+                    // el interes original no se conserva en la transaccion guardada
+                    'interest_earned' => 0,
+                );
+            }
+        }
+
         if ($amount <= 0) {
             return false; // no se deposita un importe invalido
         }
@@ -90,6 +105,7 @@ class TransactionService
         $transaction->transaction_type = Transaction::TYPE_DEPOSIT;
         $transaction->status = Transaction::STATUS_COMPLETED;
         $transaction->description = sprintf('Deposito de %.2f + interes de %.2f', $amount, $interest);
+        $transaction->idempotency_key = $idempotencyKey;
 
         if (!$this->transactionRepository->save($transaction)) {
             return false;
@@ -118,8 +134,21 @@ class TransactionService
      *
      * @return array{transaction_id:int,new_balance:float}|false
      */
-    public function withdraw($accountId, $amount)
+    public function withdraw($accountId, $amount, $idempotencyKey = null)
     {
+        if ($idempotencyKey !== null) {
+            $existing = $this->transactionRepository->findByIdempotencyKey($idempotencyKey);
+
+            if ($existing !== null) {
+                $account = $this->accountRepository->findById($existing->from_account_id);
+
+                return array(
+                    'transaction_id' => (int) $existing->id,
+                    'new_balance' => $account !== null ? (int) $account->balance : null,
+                );
+            }
+        }
+
         if ($amount <= 0) {
             return false;
         }
@@ -149,6 +178,7 @@ class TransactionService
         $transaction->amount = $amount;
         $transaction->transaction_type = Transaction::TYPE_WITHDRAWAL;
         $transaction->status = Transaction::STATUS_COMPLETED;
+        $transaction->idempotency_key = $idempotencyKey;
 
         if (!$this->transactionRepository->save($transaction)) {
             return false;
@@ -182,8 +212,23 @@ class TransactionService
      *
      * @return array{transaction_id:int,from_balance:float,to_balance:float}|false
      */
-    public function transfer($fromAccountId, $toAccountId, $amount)
+    public function transfer($fromAccountId, $toAccountId, $amount, $idempotencyKey = null)
     {
+        if ($idempotencyKey !== null) {
+            $existing = $this->transactionRepository->findByIdempotencyKey($idempotencyKey);
+
+            if ($existing !== null) {
+                $fromAccount = $this->accountRepository->findById($existing->from_account_id);
+                $toAccount = $this->accountRepository->findById($existing->to_account_id);
+
+                return array(
+                    'transaction_id' => (int) $existing->id,
+                    'from_balance' => $fromAccount !== null ? (int) $fromAccount->balance : null,
+                    'to_balance' => $toAccount !== null ? (int) $toAccount->balance : null,
+                );
+            }
+        }
+
         if ($fromAccountId === $toAccountId) {
             return false; // transferirse a si mismo no es una operacion valida
         }
@@ -233,6 +278,7 @@ class TransactionService
             $transactionModel->amount = $amount;
             $transactionModel->transaction_type = Transaction::TYPE_TRANSFER;
             $transactionModel->status = Transaction::STATUS_COMPLETED;
+            $transactionModel->idempotency_key = $idempotencyKey;
 
             if (!$this->transactionRepository->save($transactionModel)) {
                 $transaction->rollBack();

@@ -29,6 +29,9 @@ interface TransactionRepositoryInterface
     /** @return bool */
     public function save(Transaction $transaction);
 
+    /** Idempotencia: la transaccion ya procesada con esa key, si existe. @return Transaction|null */
+    public function findByIdempotencyKey($idempotencyKey);
+
     /**
      * Query de negocio: una transaccion cambia de estado como parte de
      * su ciclo de vida (pending -> completed/failed/reversed). No es

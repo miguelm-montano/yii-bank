@@ -73,6 +73,11 @@ class TransactionRepository implements TransactionRepositoryInterface
         }
     }
 
+    public function findByIdempotencyKey($idempotencyKey)
+    {
+        return Transaction::model()->findByAttributes(array('idempotency_key' => $idempotencyKey));
+    }
+
     /**
      * updateStatus es un metodo de negocio, no CRUD generico: una
      * transaccion cambia de estado como parte de su ciclo de vida
